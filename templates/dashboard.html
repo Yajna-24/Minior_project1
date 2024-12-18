@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Plant Disease Detection</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <nav class="navbar">
+            <h2>Welcome, {{ current_user.username }}!</h2>
+            <a href="{{ url_for('logout') }}" class="btn">Logout</a>
+        </nav>
+        
+        <div class="upload-section">
+            <h2>Upload Plant Leaf Image</h2>
+            <form id="upload-form" class="form">
+                <div class="form-group">
+                    <input type="file" id="image-input" accept=".jpg,.jpeg,.png" required>
+                </div>
+                <button type="submit" class="btn">Detect Disease</button>
+            </form>
+        </div>
+
+        <div id="result-section" class="result-section" style="display: none;">
+            <h3>Detection Results</h3>
+            <div class="result-content">
+                <div class="image-preview">
+                    <img id="uploaded-image" src="" alt="Uploaded plant leaf">
+                </div>
+                <div class="detection-info">
+                    <div class="primary-detection">
+                        <h4>Primary Detection</h4>
+                        <p><strong>Detected Disease:</strong> <span id="disease-name"></span></p>
+                        <p><strong>Confidence:</strong> <span id="confidence-score"></span></p>
+                    </div>
+
+                    <div class="alternative-detections">
+                        <h4>Alternative Possibilities</h4>
+                        <ul id="top-3-predictions"></ul>
+                    </div>
+
+                    <div class="disease-details" id="disease-details-section">
+                        <h4>Disease Information</h4>
+                        <p id="disease-info"></p>
+                        <p id="treatment-info"></p>
+                    </div>
+
+                    <div class="cure-info">
+                        <h4>Recommended Treatment:</h4>
+                        <p id="cure-details"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateList(elementId, items) {
+            const ul = document.getElementById(elementId);
+            ul.innerHTML = '';
+            items.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item;
+                ul.appendChild(li);
+            });
+        }
+
+        document.getElementById('upload-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('image-input');
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/detect', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    alert(errorData.error || 'Error uploading image. Please try again.');
+                    return;
+                }
+
+                const data = await response.json();
+                
+                // Show the result section
+                document.getElementById('result-section').style.display = 'block';
+                
+                // Update the image and basic information
+                document.getElementById('uploaded-image').src = data.image_path;
+                document.getElementById('disease-name').textContent = data.prediction;
+                document.getElementById('confidence-score').textContent = data.confidence + '%';
+
+                // Update disease information
+                const detailsSection = document.getElementById('disease-details-section');
+                if (data.disease_info) {
+                    detailsSection.style.display = 'block';
+                    document.getElementById('disease-info').textContent = data.disease_info;
+                    document.getElementById('treatment-info').textContent = data.treatment;
+                } else {
+                    detailsSection.style.display = 'none';
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error uploading image. Please try again.');
+            }
+        });
+    </script>
+</body>
+</html>
